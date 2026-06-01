@@ -218,11 +218,21 @@ fun MainScreen(viewModel: SocialViewModel) {
     val activeCall by viewModel.activeCall.collectAsStateWithLifecycle()
     val selectedLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
 
+    val sharedText by viewModel.sharedText.collectAsStateWithLifecycle()
+    val sharedMediaUri by viewModel.sharedMediaUri.collectAsStateWithLifecycle()
+    val sharedIsVideo by viewModel.sharedIsVideo.collectAsStateWithLifecycle()
+
     var selectedTab by remember { mutableIntStateOf(0) }
     var showCreatePostSheet by remember { mutableStateOf(false) }
     var activePostForComments by remember { mutableStateOf<Post?>(null) }
     var activeStoryView by remember { mutableStateOf<Story?>(null) }
     var activePostForSharing by remember { mutableStateOf<Post?>(null) }
+
+    LaunchedEffect(sharedText, sharedMediaUri, sharedIsVideo) {
+        if (sharedText != null || sharedMediaUri != null) {
+            showCreatePostSheet = true
+        }
+    }
 
     val primaryGradient = Brush.linearGradient(
         colors = listOf(Color(0xFF00EF60), Color(0xFF0575E6))
@@ -375,10 +385,17 @@ fun MainScreen(viewModel: SocialViewModel) {
                 if (showCreatePostSheet) {
                     CreatePostSheet(
                         currentUser = currentUser,
-                        onDismiss = { showCreatePostSheet = false },
+                        initialText = sharedText ?: "",
+                        initialMediaUri = sharedMediaUri,
+                        initialIsVideo = sharedIsVideo,
+                        onDismiss = { 
+                            showCreatePostSheet = false 
+                            viewModel.clearSharedContent()
+                        },
                         onPostCreated = { content, gradient, mediaUri, isVideo ->
                             viewModel.createPost(content, gradient, mediaUri, isVideo)
                             showCreatePostSheet = false
+                            viewModel.clearSharedContent()
                         }
                     )
                 }
@@ -962,44 +979,6 @@ fun FeedTab(
     onStoryClicked: (Story) -> Unit,
     onShareClicked: (Post) -> Unit
 ) {
-    // Standard mock Stories data
-    val storyList = remember(currentUser) {
-        listOf(
-            Story(
-                id = "story_alex",
-                authorName = "Alex Rivers",
-                avatarIndex = 1,
-                capTitle = "Spacing is Geometry",
-                contentQuote = "Good design feels natural and invisible. Let typography breathe elegantly.",
-                bgGradient = Brush.linearGradient(colors = listOf(Color(0xFF8A2387), Color(0xFFE94057), Color(0xFFF27121)))
-            ),
-            Story(
-                id = "story_sarah",
-                authorName = "Sarah Chen",
-                avatarIndex = 2,
-                capTitle = "Dynamic Brushes preset",
-                contentQuote = "Integrating gradient vector arrays inside Compose today. Totally gorgeous dynamic rendering!",
-                bgGradient = Brush.linearGradient(colors = listOf(Color(0xFF00C6FF), Color(0xFF0072FF)))
-            ),
-            Story(
-                id = "story_marcus",
-                authorName = "Marcus Aurelius",
-                avatarIndex = 3,
-                capTitle = "The Power of Moderation",
-                contentQuote = "Restraint in interactive features creates deep, mindful user focus.",
-                bgGradient = Brush.linearGradient(colors = listOf(Color(0xFF1D2671), Color(0xFFC33764)))
-            ),
-            Story(
-                id = "story_elena",
-                authorName = "Elena Rostova",
-                avatarIndex = 4,
-                capTitle = "Guitar Echoes",
-                contentQuote = "Recorded some raw acoustic rhythm cycles today. Feels incredibly meditative.",
-                bgGradient = Brush.linearGradient(colors = listOf(Color(0xFF11998E), Color(0xFF38EF7D)))
-            )
-        )
-    }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -1007,97 +986,6 @@ fun FeedTab(
         contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // IG Style Stories Bar Row
-        item {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
-                Text(
-                    text = "Stories",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
-                )
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Own profile story button
-                    item {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.clickable { onCreatePostRequested() }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(62.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Gray.copy(alpha = 0.2f))
-                                    .padding(3.dp)
-                            ) {
-                                UserAvatar(
-                                    avatarIndex = currentUser?.avatarIndex ?: 0,
-                                    avatarUri = currentUser?.avatarUri,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF00EF60))
-                                        .align(Alignment.BottomEnd),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Add Story", modifier = Modifier.size(12.dp), tint = Color.Black)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("Your Story", fontSize = 11.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    // Friends circles list
-                    items(storyList) { story ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.clickable { onStoryClicked(story) }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(62.dp)
-                                    .clip(CircleShape)
-                                    .background(story.bgGradient)
-                                    .padding(3.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .padding(2.dp)
-                                ) {
-                                    UserAvatar(
-                                        avatarIndex = story.avatarIndex,
-                                        avatarUri = story.avatarUri,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = story.authorName.split(" ").firstOrNull() ?: "",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
         // Compose post card prompt (Resembling Facebook's status publisher)
         item {
             Card(
@@ -1475,13 +1363,16 @@ fun PostItemCard(
 @Composable
 fun CreatePostSheet(
     currentUser: User?,
+    initialText: String = "",
+    initialMediaUri: String? = null,
+    initialIsVideo: Boolean = false,
     onDismiss: () -> Unit,
     onPostCreated: (String, Int, String?, Boolean) -> Unit
 ) {
-    var textInput by remember { mutableStateOf("") }
+    var textInput by remember { mutableStateOf(initialText) }
     var selectedGradientIndex by remember { mutableIntStateOf(0) }
-    var attachedMediaUri by remember { mutableStateOf<String?>(null) }
-    var attachedMediaIsVideo by remember { mutableStateOf(false) }
+    var attachedMediaUri by remember { mutableStateOf<String?>(initialMediaUri) }
+    var attachedMediaIsVideo by remember { mutableStateOf(initialIsVideo) }
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1755,7 +1646,21 @@ fun CommentsSheet(
 ) {
     val comments by viewModel.getCommentsForPost(post.id).collectAsStateWithLifecycle(emptyList())
     var commentText by remember { mutableStateOf("") }
+    var replyingToComment by remember { mutableStateOf<Comment?>(null) }
     val focusManager = LocalFocusManager.current
+
+    val topLevelComments = remember(comments) { comments.filter { it.parentCommentId == 0 } }
+    val repliesByParent = remember(comments) { comments.filter { it.parentCommentId != 0 }.groupBy { it.parentCommentId } }
+
+    fun formatTimeAgo(timestamp: Long): String {
+        val diff = System.currentTimeMillis() - timestamp
+        return when {
+            diff < 60000 -> "now"
+            diff < 3600000 -> "${diff / 60000}m ago"
+            diff < 86400000 -> "${diff / 3600000}h ago"
+            else -> "${diff / 86400000}d ago"
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1778,7 +1683,7 @@ fun CommentsSheet(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (comments.isEmpty()) {
+                if (topLevelComments.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -1794,34 +1699,132 @@ fun CommentsSheet(
                         }
                     }
                 } else {
-                    items(comments, key = { it.id }) { comment ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            UserAvatar(avatarIndex = comment.authorAvatarIndex, avatarUri = comment.authorAvatarUri, size = 32.dp)
-                            Spacer(modifier = Modifier.width(8.dp))
+                    topLevelComments.forEach { comment ->
+                        item(key = "comment_${comment.id}") {
                             Column(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-                                    .padding(10.dp)
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
                             ) {
-                                Text(
-                                    text = comment.authorName,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = comment.content,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    UserAvatar(avatarIndex = comment.authorAvatarIndex, avatarUri = comment.authorAvatarUri, size = 32.dp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                                            .padding(10.dp)
+                                    ) {
+                                        Text(
+                                            text = comment.authorName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = comment.content,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                                
+                                Row(
+                                    modifier = Modifier.padding(start = 40.dp, top = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Reply",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .clickable { replyingToComment = comment }
+                                            .padding(end = 12.dp)
+                                            .testTag("reply_comment_btn_${comment.id}")
+                                    )
+                                    Text(
+                                        text = formatTimeAgo(comment.timestamp),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+                        }
+
+                        val replies = repliesByParent[comment.id] ?: emptyList()
+                        if (replies.isNotEmpty()) {
+                            items(replies, key = { "reply_${it.id}" }) { reply ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 36.dp, top = 2.dp, bottom = 4.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Text(
+                                        text = "↳",
+                                        fontSize = 16.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        modifier = Modifier.padding(end = 6.dp, top = 2.dp)
+                                    )
+                                    UserAvatar(avatarIndex = reply.authorAvatarIndex, avatarUri = reply.authorAvatarUri, size = 26.dp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f), RoundedCornerShape(12.dp))
+                                            .padding(8.dp)
+                                    ) {
+                                        Text(
+                                            text = reply.authorName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = reply.content,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
+            }
+
+            if (replyingToComment != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Replying to @${replyingToComment?.authorName}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    IconButton(
+                        onClick = { replyingToComment = null },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cancel reply",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             Row(
@@ -1833,7 +1836,7 @@ fun CommentsSheet(
                 OutlinedTextField(
                     value = commentText,
                     onValueChange = { commentText = it },
-                    placeholder = { Text("Write a comment...") },
+                    placeholder = { Text(if (replyingToComment == null) "Write a comment..." else "Write a reply...") },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("comment_bar_input"),
@@ -1848,8 +1851,9 @@ fun CommentsSheet(
                 IconButton(
                     onClick = {
                         if (commentText.isNotBlank()) {
-                            viewModel.addComment(post.id, commentText)
+                            viewModel.addComment(post.id, commentText, parentCommentId = replyingToComment?.id ?: 0)
                             commentText = ""
+                            replyingToComment = null
                             focusManager.clearFocus()
                         }
                     },

@@ -41,7 +41,8 @@ data class Comment(
     val authorAvatarIndex: Int,
     val authorAvatarUri: String? = null,
     val content: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val parentCommentId: Int = 0
 )
 
 @Entity(tableName = "messages")

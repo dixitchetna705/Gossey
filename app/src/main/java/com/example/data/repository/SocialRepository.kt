@@ -118,7 +118,7 @@ class SocialRepository(private val db: GossseyDatabase, private val context: Con
         GossseyWidgetProvider.triggerWidgetUpdate(context)
     }
 
-    suspend fun addComment(postId: Int, authorId: String, authorName: String, authorAvatarIndex: Int, authorAvatarUri: String?, content: String) {
+    suspend fun addComment(postId: Int, authorId: String, authorName: String, authorAvatarIndex: Int, authorAvatarUri: String?, content: String, parentCommentId: Int = 0) {
         val comment = Comment(
             postId = postId,
             authorId = authorId,
@@ -126,7 +126,8 @@ class SocialRepository(private val db: GossseyDatabase, private val context: Con
             authorAvatarIndex = authorAvatarIndex,
             authorAvatarUri = authorAvatarUri,
             content = content,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            parentCommentId = parentCommentId
         )
         commentDao.insertComment(comment)
         postDao.incrementCommentCount(postId)

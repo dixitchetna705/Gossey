@@ -58,6 +58,28 @@ class SocialViewModel(application: Application) : AndroidViewModel(application) 
     private val _loginError = MutableStateFlow<String?>(null)
     val loginError: StateFlow<String?> = _loginError.asStateFlow()
 
+    // Share Intent States
+    private val _sharedText = MutableStateFlow<String?>(null)
+    val sharedText: StateFlow<String?> = _sharedText.asStateFlow()
+
+    private val _sharedMediaUri = MutableStateFlow<String?>(null)
+    val sharedMediaUri: StateFlow<String?> = _sharedMediaUri.asStateFlow()
+
+    private val _sharedIsVideo = MutableStateFlow(false)
+    val sharedIsVideo: StateFlow<Boolean> = _sharedIsVideo.asStateFlow()
+
+    fun handleSharedContent(text: String?, mediaUri: String?, isVideo: Boolean) {
+        _sharedText.value = text
+        _sharedMediaUri.value = mediaUri
+        _sharedIsVideo.value = isVideo
+    }
+
+    fun clearSharedContent() {
+        _sharedText.value = null
+        _sharedMediaUri.value = null
+        _sharedIsVideo.value = false
+    }
+
     // Chat target
     private val _activeChatPartner = MutableStateFlow<User?>(null)
     val activeChatPartner: StateFlow<StateFlowPartnerWrapper?> = _activeChatPartner
@@ -156,7 +178,7 @@ class SocialViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun addComment(postId: Int, content: String) {
+    fun addComment(postId: Int, content: String, parentCommentId: Int = 0) {
         val user = currentUser.value ?: return
         viewModelScope.launch {
             repository.addComment(
@@ -165,7 +187,8 @@ class SocialViewModel(application: Application) : AndroidViewModel(application) 
                 authorName = user.fullName,
                 authorAvatarIndex = user.avatarIndex,
                 authorAvatarUri = user.avatarUri,
-                content = content
+                content = content,
+                parentCommentId = parentCommentId
             )
         }
     }
