@@ -1,0 +1,6 @@
+{
+  "name": "Gosssey",
+  "description": "A high-fidelity social connection and media feed application inspired by Facebook, featuring custom feeds, interactive messaging, profiles, and request management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
